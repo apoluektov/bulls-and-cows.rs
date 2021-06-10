@@ -11,6 +11,7 @@ struct Code {
     digits: [u8; 4]
 }
 
+
 impl Code {
     fn from_number(n: u16) -> Code {
         let divs = [1000, 100, 10, 1];
@@ -21,7 +22,6 @@ impl Code {
 
         Code { digits }
     }
-
 
     fn is_valid(&self) -> bool {
         let d = &self.digits;
@@ -52,6 +52,25 @@ fn all_possible_codes() -> Vec<Code> {
 }
 
 
+fn bc(c0: &Code, c1: &Code) -> BC {
+    let mut bulls = 0;
+    let mut cows = 0;
+    for (i, &d0) in c0.digits.iter().enumerate() {
+        for (j, &d1) in c1.digits.iter().enumerate() {
+            if d0 == d1 {
+                if i == j {
+                    bulls += 1
+                } else {
+                    cows += 1
+                }
+            }
+        }
+    }
+
+    BC {bulls, cows}
+}
+
+
 struct Responder {
     secret_code: Code
 }
@@ -59,31 +78,44 @@ struct Responder {
 
 impl Responder {
     fn response(&self, guess: &Code) -> BC {
-        let mut bulls = 0;
-        let mut cows = 0;
-        for (i, &d0) in self.secret_code.digits.iter().enumerate() {
-            for (j, &d1) in guess.digits.iter().enumerate() {
-                if d0 == d1 {
-                    if i == j {
-                        bulls += 1
-                    } else {
-                        cows += 1
-                    }
-                }
-            }
-        }
-        return BC {bulls, cows}
+        bc(&self.secret_code, guess)
     }
 }
 
 
 struct CodeBreaker {
+    responder: Responder, // FIXME: borrow when I've learned lifetimes
+    possible_correct_codes: Vec<Code>,
+    possible_guesses: Vec<Code>
+}
 
+
+impl CodeBreaker {
+    fn new(responder: Responder) -> CodeBreaker {
+        CodeBreaker {
+            responder,
+            possible_correct_codes: all_possible_codes(),
+            possible_guesses: all_possible_codes()
+        }
+    }
+
+    fn make_turn(&mut self, code: Code) -> BC {
+        let bc0 = self.responder.response(&code);
+        self.possible_correct_codes.retain(|c| bc(&c, &code) == bc0);
+
+        bc0
+    }
 }
 
 
 fn main() {
-    let mut breaker = CodeBreaker {};
+    let resp = Responder { secret_code: Code::from_number(1278) };
+
+    let mut breaker = CodeBreaker::new(resp);
+    breaker.make_turn(Code::from_number(1234));
+    breaker.make_turn(Code::from_number(5678));
+
+    println!("{:?}", breaker.possible_correct_codes);
 
 
     //println!("{:?}", all_possible_codes());
