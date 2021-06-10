@@ -83,15 +83,15 @@ impl Responder {
 }
 
 
-struct CodeBreaker {
-    responder: Responder, // FIXME: borrow when I've learned lifetimes
+struct CodeBreaker<'a> {
+    responder: &'a Responder,
     possible_correct_codes: Vec<Code>,
     possible_guesses: Vec<Code>
 }
 
 
-impl CodeBreaker {
-    fn new(responder: Responder) -> CodeBreaker {
+impl<'a> CodeBreaker<'a> {
+    fn new(responder: &Responder) -> CodeBreaker {
         CodeBreaker {
             responder,
             possible_correct_codes: all_possible_codes(),
@@ -111,7 +111,7 @@ impl CodeBreaker {
 fn main() {
     let resp = Responder { secret_code: Code::from_number(1278) };
 
-    let mut breaker = CodeBreaker::new(resp);
+    let mut breaker = CodeBreaker::new(&resp);
     breaker.make_turn(Code::from_number(1234));
     breaker.make_turn(Code::from_number(5678));
 
