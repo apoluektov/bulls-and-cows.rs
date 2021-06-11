@@ -1,12 +1,14 @@
+use std::collections::HashMap;
 
-#[derive(PartialEq, Debug)]
+
+#[derive(PartialEq, Eq, Debug, Hash)]
 struct BC {
     bulls: u8,
     cows: u8
 }
 
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 struct Code {
     digits: [u8; 4]
 }
@@ -99,11 +101,42 @@ impl<'a> CodeBreaker<'a> {
         }
     }
 
-    fn make_turn(&mut self, code: Code) -> BC {
+    fn make_turn(&mut self, code: &Code) -> BC {
         let bc0 = self.responder.response(&code);
         self.possible_correct_codes.retain(|c| bc(&c, &code) == bc0);
 
+        println!("{:?} -> {:?}", code, bc0);
+
         bc0
+    }
+
+    fn find_best_guess(&self) -> Code {
+        if self.possible_guesses.len() == self.possible_correct_codes.len() {
+            return self.possible_correct_codes[0];
+        }
+
+        if self.possible_correct_codes.len() == 1 {
+            return self.possible_correct_codes[0];
+        }
+
+        //let mut distribution_by_code = HashMap<Code, HashMap<>>
+        let mut worst_case_to_guesses: HashMap<u16, Vec<&Code>> = HashMap::new();
+        for guess in self.possible_guesses.iter() {
+            let mut response_distribution: HashMap<BC, u16> = HashMap::new();
+            for code in self.possible_correct_codes.iter() {
+                let resp = bc(guess, code);
+                let count = response_distribution.entry(resp).or_insert(0);
+                *count += 1;
+            }
+            assert!(!response_distribution.is_empty());
+            let worst_case = response_distribution.values().max().unwrap();
+            let guesses = worst_case_to_guesses.entry(*worst_case).or_insert(Vec::new());
+            guesses.push(guess);
+        }
+        assert!(!worst_case_to_guesses.is_empty());
+        let (_, best_guesses) = worst_case_to_guesses.iter().min_by_key(|kv| kv.0).unwrap();
+
+        *best_guesses[0]
     }
 }
 
@@ -112,13 +145,13 @@ fn main() {
     let resp = Responder { secret_code: Code::from_number(1278) };
 
     let mut breaker = CodeBreaker::new(&resp);
-    breaker.make_turn(Code::from_number(1234));
-    breaker.make_turn(Code::from_number(5678));
-
-    println!("{:?}", breaker.possible_correct_codes);
-
-
-    //println!("{:?}", all_possible_codes());
+    loop {
+        let best_guess = breaker.find_best_guess();
+        let res = breaker.make_turn(&best_guess);
+        if res.bulls == 4 {
+            break;
+        }
+    }
 }
 
 
