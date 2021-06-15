@@ -1,4 +1,7 @@
 use std::collections::HashMap;
+use std::env;
+use std::io;
+use std::process;
 
 
 #[derive(PartialEq, Eq, Debug, Hash)]
@@ -140,8 +143,50 @@ impl<'a> CodeBreaker<'a> {
     }
 }
 
+#[derive(Debug)]
+enum GameMode {
+    HumanBreaksAi,
+    AiBreaksHuman,
+    AiBreaksAi
+}
 
-fn main() {
+
+struct Config {
+    mode: GameMode
+}
+
+impl Config {
+    fn new(args: &[String]) -> Result<Self, String> {
+        assert!(args.len() > 0);
+        if args.len() > 2 {
+            Err(format!("Usage: {} (--human|--ai|--auto)", args[0]))
+        } else if args.len() == 2 {
+            let mmode = match &args[1][..] {
+                "--human" => Ok(GameMode::HumanBreaksAi),
+                "--ai" => Ok(GameMode::AiBreaksHuman),
+                "--auto" => Ok(GameMode::AiBreaksAi),
+                _ => Err(format!("Usage: {} (--human|--ai|--auto)", args[0]))
+            };
+            mmode.map(|mode| Config { mode })
+        } else {
+            println!("1. Human breaks the code by AI\n2. AI breaks the code by Human\n3. AI plays with itself.");
+            println!("Choose [1-3] (default is 3)");
+            let mut opt: String = String::new();
+            io::stdin()
+                .read_line(&mut opt)
+                .expect("Failed to read line");
+            let mode = match &opt[..] {
+                "1" => GameMode::HumanBreaksAi,
+                "2" => GameMode::AiBreaksHuman,
+                _ => GameMode::AiBreaksAi
+            };
+            Ok(Config { mode })
+        }
+    }
+}
+
+
+fn play_auto() {
     let resp = Responder { secret_code: Code::from_number(1278) };
 
     let mut breaker = CodeBreaker::new(&resp);
@@ -155,12 +200,36 @@ fn main() {
 }
 
 
+fn play(mode: GameMode) {
+    println!("{:?}", mode);
+    match mode {
+        GameMode::AiBreaksAi => play_auto(),
+        _ => panic!("Not implemented yet")
+    }
+}
+
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    let config = Config::new(&args);
+
+    match config {
+        Ok(cfg) => play(cfg.mode),
+        Err(s) => {
+            println!("{}", s);
+            process::exit(1);
+        }
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
 
     use crate::Responder;
     use crate::Code;
     use crate::BC;
+    use crate::Config;
 
     #[test]
     fn it_works() {
@@ -177,5 +246,20 @@ mod tests {
         assert!(Code::from_number(1357).is_valid());
         //assert!(!Code::from_number(12345).is_valid()); // FIXME will deal with this later
         assert!(!Code::from_number(1123).is_valid());
+    }
+
+    #[test]
+    fn config() {
+        let args = vec![String::from("exename"), String::from("--more"), String::from("--options")];
+        let cfg = Config::new(&args);
+        assert!(cfg.is_err());
+
+        let args = vec![String::from("exename"), String::from("--unknown")];
+        let cfg = Config::new(&args);
+        assert!(cfg.is_err());
+
+        let args = vec![String::from("exename"), String::from("--auto")];
+        let cfg = Config::new(&args);
+        assert!(!cfg.is_err());
     }
 }
