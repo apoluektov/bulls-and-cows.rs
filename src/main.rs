@@ -3,12 +3,19 @@ use std::env;
 use std::io::{self, Write};
 use std::process;
 use rand::Rng;
+use std::fmt;
 
 
 #[derive(PartialEq, Eq, Debug, Hash)]
 struct BC {
     bulls: u8,
     cows: u8
+}
+
+impl fmt::Display for BC {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}b{}c", self.bulls, self.cows)
+    }
 }
 
 
@@ -228,7 +235,7 @@ fn play_human_breaks_ai() {
                     println!("Please enter the valid 4-digit code");
                 } else {
                     let resp = bc(&ai_code, &guess);
-                    println!("{:?}", resp);
+                    println!("{}", resp);
                     if resp.bulls == 4 {
                         println!("You won!");
                         break;
