@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::env;
-use std::io;
+use std::io::{self, Write};
 use std::process;
+use rand::Rng;
 
 
 #[derive(PartialEq, Eq, Debug, Hash)]
@@ -200,10 +201,50 @@ fn play_auto() {
 }
 
 
+fn play_human_breaks_ai() {
+    let mut rng = rand::thread_rng();
+    let ai_code;
+    loop {
+        let num = rng.gen_range(0..10000);
+        let code = Code::from_number(num as u16);
+        if code.is_valid() {
+            ai_code = code;
+            break;
+        }
+    }
+
+    loop {
+        let mut guess = String::new();
+        print!("> ");
+        io::stdout().flush().unwrap();
+
+        io::stdin().read_line(&mut guess).expect("Failed to read line");
+        let guess = guess.trim().parse();
+        match guess {
+            Err(_) => println!("Please enter the valid 4-digit code"),
+            Ok(num) => {
+                let guess = Code::from_number(num);
+                if !guess.is_valid() {
+                    println!("Please enter the valid 4-digit code");
+                } else {
+                    let resp = bc(&ai_code, &guess);
+                    println!("{:?}", resp);
+                    if resp.bulls == 4 {
+                        println!("You won!");
+                        break;
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 fn play(mode: GameMode) {
     println!("{:?}", mode);
     match mode {
         GameMode::AiBreaksAi => play_auto(),
+        GameMode::HumanBreaksAi => play_human_breaks_ai(),
         _ => panic!("Not implemented yet")
     }
 }
